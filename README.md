@@ -17,6 +17,18 @@ This repo is designed as a reference / tutorial / research workflow rather than 
 
 ---
 
+## 📜 R Script
+
+- `scripts/preprocess_data.R`  
+  This script loads the original NanoString TMA data and converts it into a format that can be read by Python notebooks.  
+
+### Run the R script
+
+```bash
+Rscript scripts/preprocess_data.R
+
+---
+
 ## 📦 Installation
 
 Clone this repository:
