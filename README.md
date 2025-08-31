@@ -26,6 +26,7 @@ This repo is designed as a reference / tutorial / research workflow rather than 
 
 ```bash
 Rscript scripts/preprocess_data.R
+```
 
 ---
 
