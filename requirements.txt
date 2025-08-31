@@ -9,3 +9,5 @@ squidpy
 shap
 scikit-learn
 ipykernel
+igraph
+leidenalg
