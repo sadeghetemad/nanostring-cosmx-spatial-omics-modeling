@@ -1,5 +1,8 @@
 # Dir
 data
+notebooks/figures
+notebooks/output
+notebooks/report
 
 
 # Byte-compiled / optimized / DLL files
