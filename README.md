@@ -84,4 +84,4 @@ Feel free to open issues or pull requests if you’d like to add new notebooks o
 
 ## 📄 License
 
-[MIT](LICENSE) © 2025 Sadegh Etemad
+[MIT](LICENSE) © 2025 Ochipinti-Lab
