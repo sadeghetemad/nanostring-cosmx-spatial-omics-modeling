@@ -8,7 +8,7 @@ This repo is designed as a reference / tutorial / research workflow rather than 
 
 ---
 
-## 📚 Contents
+## 📚 Notebooks
 
 - `01_tma_data_analysis.ipynb` → Read and analyze NanoString tissue microarray (TMA) data
 - `02_tma_preprocessing.ipynb` → Perform preprocessing steps on NanoString data
@@ -36,8 +36,8 @@ Rscript scripts/preprocess_data.R
 Clone this repository:
 
 ```bash
-git https://github.com/sadeghetemad/spFlux.git
-cd spFlux
+git clone https://github.com/Occhipinti-Lab/nanostring-cosmx-spatial-omics-modeling.git
+cd nanostring-cosmx-spatial-omics-modeling
 ```
 
 Install the dependencies (adjust if you’re using conda/venv):
