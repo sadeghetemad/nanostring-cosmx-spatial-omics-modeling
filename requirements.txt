@@ -11,3 +11,4 @@ scikit-learn
 ipykernel
 igraph
 leidenalg
+lightgbm

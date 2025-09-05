@@ -5,10 +5,10 @@
 # install.packages("tidyverse")
 # install.packages("patchwork")
 # install.packages("bpCell")
-# install.packages("remotes")
 # install.packages("hdf5r")
-# remotes::install_github("mojaveazure/seurat-disk")
 
+# install.packages("remotes")
+# remotes::install_github("mojaveazure/seurat-disk")
 
 library(SeuratDisk)
 library(Seurat)
@@ -19,10 +19,10 @@ output_dir <- "converted_files_to_python_readable"
 dir.create(output_dir, showWarnings = FALSE)
 
 rds_files <- c(
-  "first_project/TMA1_minimal.rds",
-  "first_project/TMA2_minimal.rds",
-  "first_project/TMA3_minimal.rds",
-  "first_project/TMA4_minimal.rds"
+  "data/TMA1_minimal.rds",
+  "data/TMA2_minimal.rds",
+  "data/TMA3_minimal.rds",
+  "data/TMA4_minimal.rds"
 )
 
 
@@ -109,11 +109,7 @@ lapply(rds_files, process_rds)
 # Read data for each TMA
 
 # Load the .rds file
-data <- readRDS("my_codes/CosMX_Nanostring_Analysis/rds_datasets/TMA1_minimal.rds")
-
-data <- readRDS("my_codes/CosMX_Nanostring_Analysis/rds_datasets/CRC_Integrated_TMA_harmonized.rds")
-
-
+data <- readRDS("data/TMA1_minimal.rds")
 
 counts_mat <- GetAssayData(data, assay = "Nanostring", layer = "counts")
 write.csv(counts_mat, file = "gene_expression_tma1.csv")
