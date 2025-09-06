@@ -1,8 +1,6 @@
 # Multimodal analysis of Nanostring CosMX spatial transcriptomics and fluxomics.
  A collection of Jupyter notebooks for multimodal analysis and modeling of Nanostring CosMX spatial transcriptomics and fluxomics data.
 
-
-
 Each notebook demonstrates a specific task or workflow.  
 This repo is designed as a reference / tutorial / research workflow rather than a single Python package.
 
