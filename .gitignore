@@ -3,6 +3,9 @@ data
 notebooks/figures
 notebooks/output
 notebooks/report
+notebooks/results
+notebooks/*.csv
+*.png
 
 
 # Byte-compiled / optimized / DLL files
