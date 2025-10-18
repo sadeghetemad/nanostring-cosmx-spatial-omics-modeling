@@ -7,6 +7,9 @@ notebooks/results
 notebooks/result_per_patient
 notebooks/*.csv
 *.png
+results
+logs
+pdf
 
 
 # Byte-compiled / optimized / DLL files
