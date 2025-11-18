@@ -31,23 +31,34 @@ PDF_DIR.mkdir(parents=True, exist_ok=True)
 
 TASK_TREATED_FILE = DATA_DIR / "Metabolic_Tasks_Treated.csv"
 TASK_UNTREATED_FILE = DATA_DIR / "Metabolic_Tasks_Untreated.csv"
+DE_TOP20_DATA = DATA_DIR / "DE_Top20_Annotated.csv"
 
 # ---------------- LOAD DATA ----------------
 task_treated = pd.read_csv(TASK_TREATED_FILE)
 task_untreated = pd.read_csv(TASK_UNTREATED_FILE)
+de_analysis = pd.read_csv(DE_TOP20_DATA)
 
-# Check that Cell_type column exists
+# ---------------- CHECK COLUMNS ----------------
 if "Cell_type" not in task_treated.columns or "Cell_type" not in task_untreated.columns:
     raise ValueError("❌ Column 'Cell_type' not found in input CSV files.")
 
-# ---------------- COMPUTE MEAN SCORE PER CELL ----------------
+# ---------------- SELECT ONLY TOP 20 TASKS ----------------
+top20_tasks = de_analysis["Task"].dropna().unique().tolist()
+
 # Drop non-feature columns
 drop_cols = ["Subject_ID", "Treatment_Status", "Cell_ID", "Cell_type"]
-task_cols = [c for c in task_treated.columns if c not in drop_cols]
+task_cols_treated = [c for c in task_treated.columns if c in top20_tasks]
+task_cols_untreated = [c for c in task_untreated.columns if c in top20_tasks]
 
-# Compute mean metabolic activity per cell (average of all tasks)
-task_treated["Mean_Metabolic_Activity"] = task_treated[task_cols].mean(axis=1)
-task_untreated["Mean_Metabolic_Activity"] = task_untreated[task_cols].mean(axis=1)
+if not task_cols_treated or not task_cols_untreated:
+    raise ValueError("❌ None of the top 20 task names found in the treated/untreated data columns.")
+
+# ---------------- COMPUTE MEAN SCORE PER CELL ----------------
+task_treated["Mean_Metabolic_Activity"] = task_treated[task_cols_treated].mean(axis=1)
+task_untreated["Mean_Metabolic_Activity"] = task_untreated[task_cols_untreated].mean(axis=1)
+
+print(f"✅ Computed mean metabolic activity based on {len(top20_tasks)} top tasks.")
+print("🧩 Example tasks used:", ", ".join(top20_tasks[:5]), "...")
 
 # ---------------- FIND COMMON CELL TYPES ----------------
 celltypes_treated = set(task_treated["Cell_type"].unique())
@@ -125,13 +136,16 @@ for cell_type in common_celltypes:
             ha="center", va="bottom",
             fontsize=9, color=color, fontweight="bold")
 
-    # --- Add means below violins ---
+    # --- Add mean ± variance on top of violins ---
     mean_t = treated_vals.mean()
     std_t = treated_vals.std()
     mean_u = untreated_vals.mean()
     std_u = untreated_vals.std()
-    ax.text(0, ymin * 0.97, f"{mean_t:.2f} ± {std_t:.2f}", ha="center", va="top", fontsize=7, color="#c23b22")
-    ax.text(1, ymin * 0.97, f"{mean_u:.2f} ± {std_u:.2f}", ha="center", va="top", fontsize=7, color="#2255c2")
+
+    ax.text(0, ymax * 1.08, f"{mean_t:.2f} ± {std_t:.2f}", 
+            ha="center", va="bottom", fontsize=8, color="#c23b22", fontweight="medium")
+    ax.text(1, ymax * 1.08, f"{mean_u:.2f} ± {std_u:.2f}", 
+            ha="center", va="bottom", fontsize=8, color="#2255c2", fontweight="medium")
 
     plt.tight_layout()
     pdf_all.savefig()

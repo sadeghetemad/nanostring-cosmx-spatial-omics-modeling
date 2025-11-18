@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Run scCellFie per Subject
-(Simple, CPU-Optimized, with tqdm progress bar)
-
-Author: Sadegh Etemad
-"""
 
 import os
 import gc
@@ -40,7 +34,7 @@ def log(msg):
 def run_sccellfie(adata, folder, name):
     """Run scCellFie pipeline for one subject."""
     os.makedirs(folder, exist_ok=True)
-    log(f"🧬 Running scCellFie for {name}...")
+    log(f"Running scCellFie for {name}...")
     adata_out = sccellfie.run_sccellfie_pipeline(
         adata,
         organism=ORGANISM,
@@ -64,7 +58,7 @@ def run_sccellfie(adata, folder, name):
 
 def main():
     log("=" * 60)
-    log("🚀 Running scCellFie per subject")
+    log("Running scCellFie per subject")
     log("=" * 60)
 
     # Load dataset
@@ -74,12 +68,12 @@ def main():
 
     # Basic validation
     if "Subject_ID" not in adata.obs or "Treatment_Status" not in adata.obs:
-        raise ValueError("❌ Missing columns: Subject_ID or Treatment_Status")
+        raise ValueError("Missing columns: Subject_ID or Treatment_Status")
 
     subjects = adata.obs["Subject_ID"].unique()
 
     # tqdm progress bar
-    log(f"📦 Found {len(subjects)} subjects")
+    log(f" Found {len(subjects)} subjects")
     for sid in tqdm(subjects, desc="Processing subjects", ncols=90):
         subset = adata[adata.obs["Subject_ID"] == sid].copy()
         treatment = subset.obs["Treatment_Status"].unique()[0]
@@ -87,11 +81,11 @@ def main():
 
         try:
             run_sccellfie(subset, out_dir, sid)
-            log(f"✅ Done: {sid} ({treatment})")
+            log(f" Done: {sid} ({treatment})")
         except Exception as e:
-            log(f"⚠️ Error in {sid}: {e}")
+            log(f" Error in {sid}: {e}")
 
-    log("🏁 All subjects processed successfully.")
+    log(" All subjects processed successfully.")
     log("=" * 60)
 
 

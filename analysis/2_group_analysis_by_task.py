@@ -7,9 +7,7 @@ Each page compares Treated vs Untreated for one metabolic task.
 Author: Sadegh Etemad
 """
 
-import os
-import gc
-import warnings
+import os, gc, warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -39,16 +37,16 @@ task_treated = pd.read_csv(TASK_TREATED_FILE)
 task_untreated = pd.read_csv(TASK_UNTREATED_FILE)
 moran_df.columns = [c.strip() for c in moran_df.columns]
 
-# ---------------- MORAN SUMMARY ----------------
+# ---------------- MORAN SUMMARY (MEAN + STD) ----------------
 moran_summary = (
-    moran_df.groupby(["Treatment_Status", "Task"], as_index=False)["I"]
-    .mean()
-    .rename(columns={"I": "Mean_MoranI"})
+    moran_df.groupby(["Treatment_Status", "Task"], as_index=False)
+    .agg(Mean_MoranI=("I", "mean"), STD_MoranI=("I", "std"))
 )
 
 # ---------------- FIND COMMON TASKS ----------------
-tasks_treated = set(task_treated.drop(columns=["Subject_ID", "Treatment_Status", "Cell_ID","Cell_type"], errors="ignore").columns)
-tasks_untreated = set(task_untreated.drop(columns=["Subject_ID", "Treatment_Status", "Cell_ID", "Cell_type"], errors="ignore").columns)
+drop_cols = ["Subject_ID", "Treatment_Status", "Cell_ID", "Cell_type"]
+tasks_treated = set(task_treated.drop(columns=drop_cols, errors="ignore").columns)
+tasks_untreated = set(task_untreated.drop(columns=drop_cols, errors="ignore").columns)
 common_tasks = sorted(tasks_treated.intersection(tasks_untreated))
 
 # ---------------- PREPARE OUTPUT FILES ----------------
@@ -56,13 +54,13 @@ pdf_all = PdfPages(PDF_DIR / "Violin_All_Tasks.pdf")
 pdf_sig = PdfPages(PDF_DIR / "Violin_Significant_Tasks.pdf")
 significant_tasks = []
 
-# ---------------- HELPER FUNCTIONS ----------------
+# ---------------- HELPER FUNCTION ----------------
 def is_normal(data, alpha=0.05):
     """Check normality with Shapiro–Wilk test."""
     if len(data) < 3:
         return False
-    stat, p = shapiro(data)
-    return p > alpha  # True if normal
+    _, p = shapiro(data)
+    return p > alpha
 
 # ---------------- MAIN LOOP ----------------
 for task in common_tasks:
@@ -71,67 +69,51 @@ for task in common_tasks:
     if len(treated_vals) < 5 or len(untreated_vals) < 5:
         continue
 
-    # --- Test normality ---
     normal_treated = is_normal(treated_vals)
     normal_untreated = is_normal(untreated_vals)
 
-    # --- Select appropriate test ---
     if normal_treated and normal_untreated:
         test_name = "t-test"
-        stat, p_val = ttest_ind(treated_vals, untreated_vals, equal_var=False)
+        _, p_val = ttest_ind(treated_vals, untreated_vals, equal_var=False)
     else:
         test_name = "Mann–Whitney U"
-        stat, p_val = mannwhitneyu(treated_vals, untreated_vals, alternative="two-sided")
+        _, p_val = mannwhitneyu(treated_vals, untreated_vals, alternative="two-sided")
 
-    # --- Prepare dataframe for plotting ---
     df_plot = pd.DataFrame({
         "Score": np.concatenate([treated_vals, untreated_vals]),
         "Group": ["Treated"] * len(treated_vals) + ["Untreated"] * len(untreated_vals)
     })
 
     plt.figure(figsize=(6, 6))
-    ax = sns.violinplot(
-        data=df_plot,
-        x="Group",
-        y="Score",
-        inner="box",
-        cut=0,
-        linewidth=1.2,
-        palette=["#c23b22", "#2255c2"]
-    )
+    ax = sns.violinplot(data=df_plot, x="Group", y="Score", inner="box",
+                        cut=0, linewidth=1.2, palette=["#c23b22", "#2255c2"])
 
-    # --- Styling ---
-    ymax = df_plot["Score"].max()
-    ymin = df_plot["Score"].min()
+    ymax, ymin = df_plot["Score"].max(), df_plot["Score"].min()
     plt.ylim(ymin * 0.95, ymax * 1.25)
-
     plt.ylabel("Metabolic Task Score", fontsize=11)
     plt.xlabel("")
     plt.xticks(fontsize=10)
-
-    # --- Title (separated cleanly from test info) ---
     ax.set_title(task, fontsize=8, loc="center", pad=12, wrap=True)
 
-    # --- Add test result box on top ---
     sig_text = "p < 0.001" if p_val < 0.001 else f"p = {p_val:.3f}"
     color = "darkred" if p_val < 0.05 else "black"
-    test_text = f"{test_name} • {sig_text}"
+    ax.text(0.5, ymax * 1.18, f"{test_name} • {sig_text}",
+            ha="center", va="bottom", fontsize=7, color=color, fontweight="bold")
 
-    ax.text(0.5, ymax * 1.18, test_text,
-            ha="center", va="bottom",
-            fontsize=7, color=color, fontweight="bold")
-
-    # --- Moran I annotations ---
     for group in ["Treated", "Untreated"]:
-        mean_I = moran_summary.loc[
+        moran_stats = moran_summary.loc[
             (moran_summary["Treatment_Status"] == group) &
             (moran_summary["Task"] == task),
-            "Mean_MoranI"
+            ["Mean_MoranI", "STD_MoranI"]
         ]
-        if not mean_I.empty:
+        if not moran_stats.empty:
             xpos = 0 if group == "Treated" else 1
-            ax.text(xpos, ymax * 1.03, f"I={mean_I.values[0]:.3f}",
-                    ha="center", va="bottom", fontsize=8, color="darkred")
+            mean_I = moran_stats["Mean_MoranI"].values[0]
+            var_I = moran_stats["STD_MoranI"].values[0]
+            ax.text(xpos, ymax * 1.03,
+                    f"Moran's I = {mean_I:.3f} ± {var_I:.3f}",
+                    ha="center", va="bottom", fontsize=8,
+                    color="darkred", fontweight="medium")
 
     plt.tight_layout()
     pdf_all.savefig()
@@ -144,12 +126,81 @@ for task in common_tasks:
 pdf_all.close()
 pdf_sig.close()
 
-# ---------------- SAVE SUMMARY CSV ----------------
-summary_df = pd.DataFrame(significant_tasks,
-                          columns=["Task", "Test_Type", "p_value", "Normal_Treated", "Normal_Untreated"])
-summary_df.to_csv(DATA_DIR / "DE_Data.csv", index=False)
+# ---------------- CREATE ANNOTATED DATASETS ----------------
+summary_df = pd.DataFrame(
+    significant_tasks,
+    columns=["Task", "Test_Type", "p_value", "Normal_Treated", "Normal_Untreated"]
+)
 
-print("✅ PDFs saved successfully.")
-print(f"📘 All Tasks → {PDF_DIR / 'Violin_All_Tasks.pdf'}")
-print(f"📕 Significant Tasks → {PDF_DIR / 'Violin_Significant_Tasks.pdf'}")
-print(f"📄 CSV Summary → {DATA_DIR / 'DE_Data.csv'}")
+task_info_df = pd.read_csv(OUTPUT_DIR / "Task_Info_with_CRC_binary.csv")
+summary_df = summary_df.merge(task_info_df, on="Task", how="left")
+
+summary_df = summary_df.sort_values("p_value", ascending=True).reset_index(drop=True)
+top20_df = summary_df.head(20).copy()
+
+summary_df.to_csv(DATA_DIR / "DE_Data_Annotated.csv", index=False)
+top20_df.to_csv(DATA_DIR / "DE_Top20_Annotated.csv", index=False)
+
+# ---------------- GENERATE PDF FOR TOP 20 ----------------
+PDF_TOP20 = PDF_DIR / "Violin_Top20_Tasks.pdf"
+pdf_top20 = PdfPages(PDF_TOP20)
+top20_tasks = top20_df["Task"].tolist()
+
+print(f"\n📘 Generating violin plots for Top 20 Tasks ({len(top20_tasks)} tasks)...")
+
+for _, row in top20_df.iterrows():
+    task = row["Task"]
+    test_name = row["Test_Type"]
+    p_val = row["p_value"]
+    treated_vals = task_treated[task].dropna().values
+    untreated_vals = task_untreated[task].dropna().values
+    if len(treated_vals) < 5 or len(untreated_vals) < 5:
+        continue
+
+    df_plot = pd.DataFrame({
+        "Score": np.concatenate([treated_vals, untreated_vals]),
+        "Group": ["Treated"] * len(treated_vals) + ["Untreated"] * len(untreated_vals)
+    })
+
+    plt.figure(figsize=(6, 6))
+    ax = sns.violinplot(data=df_plot, x="Group", y="Score", inner="box",
+                        cut=0, linewidth=1.2, palette=["#c23b22", "#2255c2"])
+    ymax, ymin = df_plot["Score"].max(), df_plot["Score"].min()
+    plt.ylim(ymin * 0.95, ymax * 1.25)
+    plt.ylabel("Metabolic Task Score", fontsize=11)
+    plt.xlabel("")
+    plt.xticks(fontsize=10)
+    ax.set_title(task, fontsize=9, loc="center", pad=10, wrap=True)
+    ax.text(0.5, ymax * 1.18, f"{test_name} • p = {p_val:.4f}",
+            ha="center", va="bottom", fontsize=8, color="darkred", fontweight="bold")
+
+    for group in ["Treated", "Untreated"]:
+        moran_stats = moran_summary.loc[
+            (moran_summary["Treatment_Status"] == group) &
+            (moran_summary["Task"] == task),
+            ["Mean_MoranI", "STD_MoranI"]
+        ]
+        if not moran_stats.empty:
+            xpos = 0 if group == "Treated" else 1
+            mean_I = moran_stats["Mean_MoranI"].values[0]
+            var_I = moran_stats["STD_MoranI"].values[0]
+            ax.text(xpos, ymax * 1.03,
+                    f"Moran's I = {mean_I:.3f} ± {var_I:.3f}",
+                    ha="center", va="bottom", fontsize=8,
+                    color="darkred", fontweight="medium")
+
+    plt.tight_layout()
+    pdf_top20.savefig()
+    plt.close()
+    gc.collect()
+
+pdf_top20.close()
+print(f"✅ Top 20 Tasks PDF saved → {PDF_TOP20}")
+
+# ---------------- SUMMARY ----------------
+print("\n✅ Annotated datasets saved successfully.")
+print(f"📄 All Annotated → {DATA_DIR / 'DE_Data_Annotated.csv'}")
+print(f"🏆 Top 20 Annotated → {DATA_DIR / 'DE_Top20_Annotated.csv'}\n")
+print("🏆 Top 20 Tasks with Most Significant Differences (Annotated):")
+print(top20_df[["Task", "p_value", "System", "Subsystem", "Upregulated_in_CRC"]]
+      .to_string(index=False))
