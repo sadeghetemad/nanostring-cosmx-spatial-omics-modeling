@@ -6,6 +6,7 @@ notebooks/report
 notebooks/results
 notebooks/result_per_patient
 notebooks/*.csv
+analysis/*.csv
 *.png
 results
 logs
