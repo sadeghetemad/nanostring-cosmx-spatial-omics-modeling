@@ -202,7 +202,7 @@ def main():
     task_all = pd.concat(all_tasks, ignore_index=True)
 
     moran_all.to_csv(OUTPUT_DIR / "data/All_MoranI_combined.csv", index=False)
-    task_all.to_csv(OUTPUT_DIR / "data/All_Metabolic_Tasks_All.csv", index=False)
+    task_all.to_csv(OUTPUT_DIR / "data/All_Metabolic_Tasks.csv", index=False)
 
     log(" ✅ Saved treated and untreated metabolic task matrices.")
 

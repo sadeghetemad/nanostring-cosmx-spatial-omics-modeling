@@ -1,14 +1,10 @@
 # Dir
 data
-notebooks/figures
-notebooks/output
-notebooks/report
 notebooks/results
-notebooks/result_per_patient
 notebooks/*.csv
 analysis/*.csv
 *.png
-results
+sccellfie_results
 logs
 pdf
 
