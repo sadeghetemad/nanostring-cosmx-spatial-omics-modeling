@@ -14,6 +14,7 @@ import itertools
 import sccellfie
 from datetime import datetime
 from joblib import Parallel, delayed
+from scipy.stats import ttest_ind   
 
 # ---------------- SETUP ----------------
 warnings.filterwarnings("ignore")
@@ -101,6 +102,10 @@ def compute_patient_moran_and_tasks(file_base):
     task_df["Cell_ID"] = adata.obs_names
     task_df["Cell_type"] = adata.obs.get("cell_type", "NA").values
 
+    spatial = adata.metabolic_tasks.obsm["spatial"]
+    task_df["x"] = spatial[:, 0]
+    task_df["y"] = spatial[:, 1]
+
     del adata
     gc.collect()
     return moran, task_df
@@ -155,13 +160,10 @@ def compute_colocalization_for_filtered_tasks(file_base, selected_tasks, coloc_o
     df_tasks = adata_tasks.to_df()[selected_tasks].astype(float)
     task_matrix = df_tasks.to_numpy()
 
-    # index mapping for tasks
     t_idx = {t: i for i, t in enumerate(selected_tasks)}
 
-    # pairs
     pairs = list(itertools.combinations(selected_tasks, 2))
 
-    # PARALLEL
     results = Parallel(n_jobs=15, backend="loky", verbose=3)(
         delayed(compute_pair_score)(
             task_matrix, neigh_list, subject, treatment, t1, t2, t_idx
@@ -186,7 +188,7 @@ def main():
     all_morans = []
     all_tasks = []
 
-    # Step 1
+    # Step 1 — compute morans
     for folder in RESULTS_DIR.iterdir():
         if not folder.is_dir():
             continue
@@ -204,31 +206,46 @@ def main():
 
     log(" ✅ Saved treated and untreated metabolic task matrices.")
 
-    # Step 2 — select top 5 variable tasks per patient
-    log("\n🔍 Selecting top 5 variable tasks per patient...")
+    #  t-test task selection 
+    treated_all = task_all[task_all["Treatment_Status"] == "Treated"]
+    untreated_all = task_all[task_all["Treatment_Status"] == "Untreated"]
 
-    top_tasks_per_patient = []
+    task_cols = [
+        c for c in task_all.columns
+        if c not in ["Subject_ID", "Treatment_Status", "Cell_ID", "Cell_type"]
+    ]
 
-    for subject in task_all["Subject_ID"].unique():
-        df_sub = task_all[task_all["Subject_ID"] == subject]
-        task_cols = [c for c in df_sub.columns if c not in 
-                     ["Subject_ID", "Treatment_Status", "Cell_ID", "Cell_type"]]
+    results = []
 
-        var_series = df_sub[task_cols].var().sort_values(ascending=False)
-        top5 = var_series.head(5).index.tolist()
-        log(f" Patient {subject}: {top5}")
-        top_tasks_per_patient.extend(top5)
+    for task in task_cols:
+        t_vals = treated_all[task].values
+        u_vals = untreated_all[task].values
 
-    top_tasks = list(set(top_tasks_per_patient))
+        if len(t_vals) < 5 or len(u_vals) < 5:
+            continue
 
-    log(f"\n📊 Total unique selected tasks: {len(top_tasks)}")
-    log(f" Selected tasks: {top_tasks}")
+        # Welch's t-test
+        stat, p = ttest_ind(t_vals, u_vals, equal_var=False, nan_policy="omit")
 
-    # Step 3 — parallel colocalization
+        results.append((task, p))
+
+    if len(results) == 0:
+        log("\n⚠️ No tasks passed t-test filtering. Check data integrity.")
+        sig_tasks = []
+    else:
+        res_df = pd.DataFrame(results, columns=["Task", "p_value"])
+        res_df = res_df.sort_values("p_value")
+
+        sig_tasks = res_df.head(5)["Task"].tolist()
+
+    log(f"\n📊 Total significant tasks selected via t-test: {len(sig_tasks)}")
+    log(f" Selected significant tasks: {sig_tasks}")
+
+    # Step 3 — colocalization
     for folder in RESULTS_DIR.iterdir():
         if not folder.is_dir():
             continue
-        compute_colocalization_for_filtered_tasks(folder, top_tasks, coloc_out_path)
+        compute_colocalization_for_filtered_tasks(folder, sig_tasks, coloc_out_path)
 
     log("\n✅ Full pipeline completed successfully.")
 
