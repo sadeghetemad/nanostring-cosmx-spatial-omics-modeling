@@ -3,6 +3,9 @@ data
 notebooks/results
 notebooks/*.csv
 analysis/*.csv
+lin4_analysis/*.csv
+lin4_analysis/*.h5ad
+lin4_analysis/sccellfie_results_new/
 *.png
 sccellfie_results
 logs
