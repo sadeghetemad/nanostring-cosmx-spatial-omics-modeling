@@ -10,7 +10,7 @@ lin4_analysis/sccellfie_results_new/
 sccellfie_results
 logs
 pdf
-
+ttest_results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
