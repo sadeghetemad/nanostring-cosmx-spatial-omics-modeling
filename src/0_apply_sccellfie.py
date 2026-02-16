@@ -17,8 +17,8 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 
 # ---------------- CONFIG ----------------
 BASE_DIR = Path().resolve()
-INPUT_PATH = BASE_DIR / "CRC_lin4_spatial.h5ad"
-OUTPUT_DIR = BASE_DIR / "sccellfie_results_new"
+INPUT_PATH = BASE_DIR / "data/CRC_lin4_spatial.h5ad"
+OUTPUT_DIR = BASE_DIR / "sccellfie_results"
 ORGANISM = "human"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)

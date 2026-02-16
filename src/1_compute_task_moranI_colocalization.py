@@ -22,7 +22,7 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 
 # ---------------- DIR SETUP ----------------
 BASE_DIR = Path().resolve()
-RESULTS_DIR = BASE_DIR / "sccellfie_results_new"
+RESULTS_DIR = BASE_DIR / "sccellfie_results"
 OUTPUT_DIR = BASE_DIR
 os.makedirs(OUTPUT_DIR / "data", exist_ok=True)
 os.makedirs(OUTPUT_DIR / "logs", exist_ok=True)
@@ -73,7 +73,7 @@ def compute_patient_moran_and_tasks(file_base):
     subject = adata.obs["Subject_ID"].unique()[0]
     treatment = adata.obs["Treatment_Status"].unique()[0]
 
-    log(f"\n▶ Moran’s I: {subject} ({treatment}) using k=30 fixed neighbors")
+    log(f"\n Moran’s I: {subject} ({treatment}) using k=30 fixed neighbors")
 
     # Attach 30-neighbor spatial graph
     adata_tasks.obsm["spatial"] = adata.obsm["spatial"]
@@ -144,11 +144,11 @@ def compute_colocalization_for_filtered_tasks(file_base, selected_tasks, coloc_o
     task_path = file_base / f"{file_base.name}_metabolic_tasks.h5ad"
 
     if not base_path.exists() or base_path.stat().st_size == 0:
-        log(f"⚠ Skipping {file_base.name}: base file missing or empty.")
+        log(f"Skipping {file_base.name}: base file missing or empty.")
         return
 
     if not task_path.exists() or task_path.stat().st_size == 0:
-        log(f"⚠ Skipping {file_base.name}: metabolic task file missing or empty.")
+        log(f"Skipping {file_base.name}: metabolic task file missing or empty.")
         return
 
     try:
@@ -161,7 +161,7 @@ def compute_colocalization_for_filtered_tasks(file_base, selected_tasks, coloc_o
     subject = adata.obs["Subject_ID"].unique()[0]
     treatment = adata.obs["Treatment_Status"].unique()[0]
 
-    log(f"\n▶ Colocalization: {subject} ({treatment}) using 30-neighbor graph")
+    log(f"\n Colocalization: {subject} ({treatment}) using 30-neighbor graph")
 
     # Attach spatial & 30-neighbor graph
     adata_tasks.obsm["spatial"] = adata.obsm["spatial"]
@@ -171,10 +171,9 @@ def compute_colocalization_for_filtered_tasks(file_base, selected_tasks, coloc_o
     selected_tasks = [t for t in selected_tasks if t in available_tasks]
 
     if len(selected_tasks) < 2:
-        log(f"⚠ Not enough tasks for {subject}, skipping.")
+        log(f"Not enough tasks for {subject}, skipping.")
         return
 
-    # ---------- FIXED VERSION: use sparse graph ----------
     adj = adata_tasks.obsp["spatial_connectivities"].tocsr()
     neigh_list = [adj[i].indices for i in range(adj.shape[0])]
 
@@ -215,11 +214,11 @@ def main():
     #  STEP 1 — CHECK IF MORAN & TASK MATRICES ALREADY EXIST
     # -------------------------------------------------------------
     if moran_file.exists() and task_file.exists():
-        log("⚠ Files already exist. Skipping Moran + Task extraction.")
+        log(" Files already exist. Skipping Moran + Task extraction.")
         moran_all = pd.read_csv(moran_file)
         task_all = pd.read_csv(task_file)
     else:
-        log("▶ Running Moran + Task extraction... (files not found)")
+        log(" Running Moran + Task extraction... (files not found)")
         all_morans, all_tasks = [], []
 
         for folder in RESULTS_DIR.iterdir():
@@ -237,7 +236,7 @@ def main():
         moran_all.to_csv(moran_file, index=False)
         task_all.to_csv(task_file, index=False)
 
-        log("✅ Saved global Moran and metabolic task matrices.")
+        log(" Saved global Moran and metabolic task matrices.")
 
     # -------------------------------------------------------------
     #  STEP 2 — T-TEST FOR SIGNIFICANT TASKS
@@ -259,13 +258,13 @@ def main():
             results.append((task, p))
 
     if not results:
-        log("⚠ No tasks significant; skipping colocalization.")
+        log(" No tasks significant; skipping colocalization.")
         sig_tasks = []
     else:
         df = pd.DataFrame(results, columns=["Task", "p_value"]).sort_values("p_value")
         sig_tasks = df.head(5)["Task"].tolist()
 
-    log(f"\n📊 Significant tasks to test colocalization: {sig_tasks}")
+    log(f"\n Significant tasks to test colocalization: {sig_tasks}")
 
     # -------------------------------------------------------------
     #  STEP 3 — COLOCALIZATION ONLY
@@ -275,7 +274,7 @@ def main():
             continue
         compute_colocalization_for_filtered_tasks(folder, sig_tasks, coloc_out_path)
 
-    log("\n🎉 Full pipeline completed successfully.")
+    log("\n Full pipeline completed successfully.")
 
 
 if __name__ == "__main__":
