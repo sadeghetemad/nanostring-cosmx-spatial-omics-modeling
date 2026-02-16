@@ -11,3 +11,5 @@ ipykernel
 igraph
 leidenalg
 lightgbm
+# torch    ## use for gnn, but not required for the rest of the analysis
+# torch-geometric

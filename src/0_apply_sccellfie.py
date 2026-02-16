@@ -16,7 +16,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["PYTHONWARNINGS"] = "ignore"
 
 # ---------------- CONFIG ----------------
-BASE_DIR = Path().resolve()
+BASE_DIR = Path().resolve().parent
 INPUT_PATH = BASE_DIR / "data/CRC_lin4_spatial.h5ad"
 OUTPUT_DIR = BASE_DIR / "sccellfie_results"
 ORGANISM = "human"
